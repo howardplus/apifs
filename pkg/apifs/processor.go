@@ -2,7 +2,6 @@ package apifs
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -14,12 +13,13 @@ import (
 type Processor struct {
 	rootFs    string
 	apiPrefix string
-	port      int
+
+	addr string
 
 	router *mux.Router
 }
 
-func NewProcessor(path string, prefix string, port int) (*Processor, error) {
+func NewProcessor(path string, prefix string, addr string) (*Processor, error) {
 	info, err := os.Stat(path)
 	if err != nil {
 		return nil, ErrWithError(ErrorInvalid, err)
@@ -32,7 +32,7 @@ func NewProcessor(path string, prefix string, port int) (*Processor, error) {
 	return &Processor{
 		rootFs:    path,
 		apiPrefix: prefix,
-		port:      port,
+		addr:      addr,
 		router:    mux.NewRouter(),
 	}, nil
 }
@@ -41,10 +41,9 @@ func (p *Processor) Run() error {
 	p.router.PathPrefix(p.apiPrefix).Handler(http.StripPrefix(p.apiPrefix, http.FileServer(http.Dir(p.rootFs))))
 	p.router.Use(p.loggingMiddleware)
 
-	addr := fmt.Sprintf("0.0.0.0:%d", p.port)
 	srv := &http.Server{
 		Handler:      p.router,
-		Addr:         addr,
+		Addr:         p.addr,
 		WriteTimeout: 15 * time.Second,
 		ReadTimeout:  15 * time.Second,
 	}
